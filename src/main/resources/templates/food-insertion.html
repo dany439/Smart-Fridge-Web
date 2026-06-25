@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Insertion</title>
+
+    <th:block th:replace="~{fragments/navbar :: ribbon-css}"></th:block>
+
+    <style>
+        nav.top-ribbon {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 60px !important;
+            background-color: #2c3e50 !important;
+            z-index: 9999 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary: #2ec4b6;
+            --primary-hover: #259d92;
+            --text-main: #2b2d42;
+            --text-sub: #8d99ae;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Centered form canvas wrapper container */
+        .page-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 80px 20px 40px 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Horizontal Side-by-Side Flex Engine Layout */
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 30px;
+            box-sizing: border-box;
+        }
+
+        /* Symmetrical balanced width scaling properties */
+        .form-card {
+            flex: 1;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin: 0 0 8px 0;
+            font-size: 1.5rem;
+            color: var(--text-main);
+        }
+
+        p.subtitle {
+            margin: 0 0 24px 0;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+
+        .vertical-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="datetime-local"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Drag and Drop Zone Area Styles */
+        .drop-zone {
+            width: 100%;
+            min-height: 120px;
+            border: 2px dashed var(--primary);
+            border-radius: 8px;
+            background-color: #fafafa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .drop-zone--over {
+            background-color: #e6f9f7;
+            border-color: var(--primary-hover);
+        }
+
+        .drop-zone__prompt {
+            font-size: 0.9rem;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .drop-zone__subtext {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 4px;
+        }
+
+        .drop-zone__thumb {
+            width: 100%;
+            height: 100%;
+            max-height: 150px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .drop-zone__input {
+            display: none;
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            margin-top: 8px;
+        }
+
+        button[type="submit"]:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button[type="submit"]:active {
+            transform: scale(0.98);
+        }
+
+        .field-error {
+            font-size: 0.78rem;
+            color: #e63946;
+            margin-top: 2px;
+        }
+
+        .global-error {
+            background: #fdecea;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            color: #c0392b;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* ==========================================================================
+           📱 MOBILE-FIRST RESPONSIVE MEDIA QUERIES
+           ========================================================================== */
+        @media (max-width: 768px) {
+            .page-content {
+                padding: 70px 15px 30px 15px; /* Optimize top padding for mobile navbar */
+            }
+            .container {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px; /* Reduces space between the two stacked cards */
+            }
+            .form-card {
+                width: 100%;
+                max-width: 100%; /* Takes full width of the padded container */
+                padding: 20px; /* Slightly less internal padding to save screen space */
+            }
+            h2 {
+                font-size: 1.3rem; /* Scaled down slightly for mobile headers */
+            }
+        }
+    </style>
+</head>
+<body>
+
+<nav th:replace="~{fragments/navbar :: ribbon-menu}"></nav>
+
+<div class="page-content">
+    <div class="container">
+
+        <div class="form-card">
+            <h2>Manual Entry</h2>
+            <p class="subtitle">Type in your item details manually</p>
+
+            <form th:action="@{/fridge/addManual}" th:object="${fridgeItemDTOManual}" method="post" class="vertical-form">
+                <div class="form-group">
+                    <label>Item Name</label>
+                    <input type="text" th:field="*{name}" placeholder="e.g., Milk" required />
+                    <span th:if="${#fields.hasErrors('name')}" th:errors="*{name}" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <input type="text" th:field="*{category}" placeholder="e.g., Dairy" />
+                    <span th:if="${#fields.hasErrors('category')}" th:errors="*{category}" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" th:field="*{quantity}" placeholder="e.g., 2" min="0" step="any" />
+                    <span th:if="${#fields.hasErrors('quantity')}" th:errors="*{quantity}" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Unit</label>
+                    <input type="text" th:field="*{unit}" placeholder="e.g., Liters, Cartons" />
+                    <span th:if="${#fields.hasErrors('unit')}" th:errors="*{unit}" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Expiry Date</label>
+                    <input type="datetime-local" th:field="*{expiryDate}" />
+                    <span th:if="${#fields.hasErrors('expiryDate')}" th:errors="*{expiryDate}" class="field-error"></span>
+                </div>
+
+                <div th:if="${#fields.hasErrors('*')}" class="global-error">
+                    <span th:each="err : ${#fields.errors('*')}" th:text="${err}"></span>
+                </div>
+
+                <button type="submit">Add Item</button>
+            </form>
+        </div>
+
+        <div class="form-card">
+            <h2>Image Scan</h2>
+            <p class="subtitle">Drag & drop or browse a photo to auto-detect details</p>
+
+            <form th:action="@{/fridge/addByImage}" th:object="${fridgeItemDTOImage}" method="post" enctype="multipart/form-data" class="vertical-form">
+
+                <div class="form-group">
+                    <label>Item Image</label>
+                    <div class="drop-zone" id="imageDropZone">
+                        <span class="drop-zone__prompt">Drag & Drop file here or click to browse</span>
+                        <span class="drop-zone__subtext">Supports PNG, JPG, JPEG</span>
+                        <input type="file" name="image" class="drop-zone__input" accept="image/*"/>
+                    </div>
+                    <span th:if="${imageError}" th:text="${imageError}" class="field-error"></span>
+                </div>
+
+                <input type="hidden" name="name" value="PreInferenceName" />
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <input type="text" th:field="*{category}" placeholder="e.g., Dairy" />
+                    <span th:if="${#fields.hasErrors('category')}" th:errors="*{category}" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" th:field="*{quantity}" placeholder="e.g., 2" min="0" step="any" />
+                    <span th:if="${#fields.hasErrors('quantity')}" th:errors="*{quantity}" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Unit</label>
+                    <input type="text" th:field="*{unit}" placeholder="e.g., Liters, Cartons" />
+                    <span th:if="${#fields.hasErrors('unit')}" th:errors="*{unit}" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Expiry Date</label>
+                    <input type="datetime-local" th:field="*{expiryDate}" />
+                    <span th:if="${#fields.hasErrors('expiryDate')}" th:errors="*{expiryDate}" class="field-error"></span>
+                </div>
+
+                <div th:if="${#fields.hasErrors('*')}" class="global-error">
+                    <span th:each="err : ${#fields.errors('*')}" th:text="${err}"></span>
+                </div>
+
+                <button type="submit">Scan & Add Item</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll(".drop-zone").forEach((dropZoneElement) => {
+        const inputElement = dropZoneElement.querySelector(".drop-zone__input");
+
+        dropZoneElement.addEventListener("click", () => {
+            inputElement.click();
+        });
+
+        inputElement.addEventListener("change", () => {
+            if (inputElement.files.length) {
+                updateThumbnail(dropZoneElement, inputElement.files[0]); // [0], not the FileList
+            }
+        });
+
+        dropZoneElement.addEventListener("drop", (e) => {
+            e.preventDefault();
+
+            if (e.dataTransfer.files.length) {
+                inputElement.files = e.dataTransfer.files;
+                updateThumbnail(dropZoneElement, e.dataTransfer.files[0]); // [0] here too
+            }
+
+            dropZoneElement.classList.remove("drop-zone--over");
+        });
+
+        dropZoneElement.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZoneElement.classList.add("drop-zone--over");
+        });
+
+        ["dragleave", "dragend"].forEach((type) => {
+            dropZoneElement.addEventListener(type, () => {
+                dropZoneElement.classList.remove("drop-zone--over");
+            });
+        });
+    });
+
+    function updateThumbnail(dropZoneElement, file) {
+        let thumbnailElement = dropZoneElement.querySelector(".drop-zone__thumb");
+
+        const promptEl = dropZoneElement.querySelector(".drop-zone__prompt");
+        const subtextEl = dropZoneElement.querySelector(".drop-zone__subtext");
+        if (promptEl) promptEl.remove();
+        if (subtextEl) subtextEl.remove();
+
+        if (!thumbnailElement) {
+            thumbnailElement = document.createElement("img");
+            thumbnailElement.classList.add("drop-zone__thumb");
+            dropZoneElement.appendChild(thumbnailElement);
+        }
+
+        if (file && file.type.startsWith("image/")) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                thumbnailElement.src = reader.result;
+            };
+        }
+    }
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const targetForm = document.querySelector('form');
+        if (!targetForm) return;
+
+        let formIsDirty = false;
+
+        // Mark the form dirty as soon as the user types/changes anything
+        targetForm.addEventListener('input', () => {
+            formIsDirty = true;
+        });
+
+        // Don't warn if they're actually submitting the form
+        targetForm.addEventListener('submit', () => {
+            formIsDirty = false;
+        });
+
+        // Warn on tab close / refresh / typed URL / back-forward
+        window.addEventListener('beforeunload', (event) => {
+            if (formIsDirty) {
+                event.preventDefault();
+                // Most modern browsers ignore custom text and show their own generic message
+                event.returnValue = '';
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

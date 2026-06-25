@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Systems — All Items</title>
+    <style>
+        :root {
+            --navy: #2c3e50;
+            --teal: #2ec4b6;
+            --bg: #f4f7f6;
+            --root-red: #c0392b;
+            --border: #e2e8e6;
+            --text-muted: #6b7a78;
+            --warn: #e0a800;
+            --danger: #c0392b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--navy);
+        }
+
+        .systems-navbar {
+            background-color: var(--navy);
+            border-bottom: 4px solid var(--root-red);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .systems-navbar .brand {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .root-tag {
+            background-color: var(--root-red);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .systems-navbar .nav-links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 8px 14px;
+            border-radius: 6px;
+            background-color: rgba(255,255,255,0.08);
+            transition: background-color 0.15s ease;
+        }
+
+        .nav-links a:hover {
+            background-color: rgba(255,255,255,0.18);
+        }
+
+        .nav-links a.active {
+            background-color: var(--root-red);
+        }
+
+        .page-wrap {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 24px 16px 48px;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .page-header h1 {
+            font-size: 1.4rem;
+            margin: 0;
+        }
+
+        .page-header .count {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+
+        .table-scroll {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 860px;
+        }
+
+        thead th {
+            background-color: var(--navy);
+            color: white;
+            text-align: left;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 12px 14px;
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background-color: #fafbfb;
+        }
+
+        .username-link {
+            font-weight: 600;
+            color: var(--navy);
+            text-decoration: none;
+            border-bottom: 1px dashed var(--teal);
+        }
+
+        .username-link:hover {
+            color: var(--teal);
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .badge-expired { background-color: #fbe2df; color: var(--danger); }
+        .badge-soon { background-color: #fdf1d6; color: var(--warn); }
+        .badge-fresh { background-color: #def8f5; color: #1a8f84; }
+        .badge-none { background-color: #eceeed; color: var(--text-muted); }
+
+        .tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background-color: #eceeed;
+            color: var(--navy);
+        }
+
+        .tag-image { background-color: #e3edfb; color: #2c5fa8; }
+        .tag-manual { background-color: #eceeed; color: var(--navy); }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 640px) {
+            .page-wrap { padding: 16px 10px 40px; }
+
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            thead {
+                display: none;
+            }
+
+            tbody tr {
+                background: white;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                margin-bottom: 12px;
+                padding: 12px;
+            }
+
+            tbody td {
+                border-bottom: none;
+                padding: 6px 4px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                font-size: 0.86rem;
+            }
+
+            tbody td::before {
+                content: attr(data-label);
+                font-weight: 700;
+                color: var(--text-muted);
+                font-size: 0.7rem;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+                flex-shrink: 0;
+            }
+
+            .table-card {
+                box-shadow: none;
+                background: transparent;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="systems-navbar">
+    <div class="brand">
+        Smart Fridge <span class="root-tag">Admin</span>
+    </div>
+    <div class="nav-links">
+        <a th:href="@{/systems/users}">All Users</a>
+        <a th:href="@{/systems/viewall}" class="active">All Items</a>
+        <a th:href="@{/home}">Back to App</a>
+    </div>
+</nav>
+
+<div class="page-wrap">
+    <div class="page-header">
+        <h1>All Fridge Items</h1>
+        <span class="count" th:text="${totalItems} + ' item(s) across all users'">0 item(s)</span>
+    </div>
+
+    <div class="table-card">
+        <div class="table-scroll" th:if="${not #lists.isEmpty(allItems)}">
+            <table>
+                <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Quantity</th>
+                    <th>Unit</th>
+                    <th>Storage Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                    <th>Added Via</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${allItems}">
+                    <td data-label="User">
+                        <a class="username-link" th:href="@{/systems/users/{id}(id=${item.user.id})}" th:text="${item.user.username}">jdoe</a>
+                    </td>
+                    <td data-label="Name" th:text="${item.name}">Milk</td>
+                    <td data-label="Category" th:text="${item.category} ?: '—'">Dairy</td>
+                    <td data-label="Quantity" th:text="${item.quantity}">1.00</td>
+                    <td data-label="Unit" th:text="${item.unit} ?: '—'">L</td>
+                    <td data-label="Storage Date" th:text="${item.storageDate != null} ? ${#temporals.format(item.storageDate, 'dd MMM yyyy, HH:mm')} : '—'">01 Jan 2026</td>
+                    <td data-label="Expiry Date" th:text="${item.expiryDate != null} ? ${#temporals.format(item.expiryDate, 'dd MMM yyyy, HH:mm')} : '—'">08 Jan 2026</td>
+                    <td data-label="Status" th:switch="${item.expiryDate == null ? 'none' : (item.expiryDate.isBefore(#temporals.createNow()) ? 'expired' : (item.expiryDate.isBefore(#temporals.createNow().plusDays(2)) ? 'soon' : 'fresh'))}">
+                        <span th:case="'none'" class="badge badge-none">N/A</span>
+                        <span th:case="'expired'" class="badge badge-expired">Expired</span>
+                        <span th:case="'soon'" class="badge badge-soon">Soon</span>
+                        <span th:case="'fresh'" class="badge badge-fresh">Fresh</span>
+                    </td>
+                    <td data-label="Added Via">
+                        <span th:if="${item.addedVia == 'IMAGE'}" class="tag tag-image">Image</span>
+                        <span th:if="${item.addedVia == 'MANUAL'}" class="tag tag-manual">Manual</span>
+                        <span th:if="${item.addedVia == null}" class="tag">—</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty-state" th:if="${#lists.isEmpty(allItems)}">
+            No fridge items found across any user.
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

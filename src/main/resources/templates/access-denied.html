@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Fridge Access Denied</title>
+    <style>
+        /* Unified System Design Theme Variables */
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary: #2ec4b6;
+            --primary-hover: #259d92;
+            --text-main: #2b2d42;
+            --text-sub: #8d99ae;
+            --border: #e2e8f0;
+            --error-accent: #dc3545;
+            --error-bg: #fff5f5;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .page-wrapper {
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        /* Access Denied Card Box */
+        .denied-card {
+            background-color: var(--card-bg);
+            padding: 35px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 480px;
+            box-sizing: border-box;
+            text-align: center;
+            border-top: 5px solid var(--error-accent);
+        }
+
+        .icon-shield {
+            font-size: 3rem;
+            color: var(--error-accent);
+            margin-bottom: 15px;
+        }
+
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            color: #bd2130;
+            font-weight: 700;
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: var(--border);
+            margin: 20px 0;
+        }
+
+        .warning-text {
+            font-size: 1.05rem;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        /* Stylized Path Block Indicator */
+        .path-container {
+            background-color: #f8f9fa;
+            border: 1px dashed #ced4da;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            color: var(--error-accent);
+            word-break: break-all;
+            margin: 15px 0;
+        }
+
+        /* Success banner overlay if needed */
+        .success-message {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        /* Profile Block Styling if uncommented later */
+        .user-meta-panel {
+            background-color: #fafdff;
+            border: 1px solid #e1f0fa;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: left;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+
+        .user-meta-panel p {
+            margin: 5px 0;
+        }
+
+        .bold-label {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .role-link-section {
+            margin-top: 15px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .role-link-section a {
+            color: var(--primary);
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .role-link-section a:hover {
+            text-decoration: underline;
+        }
+
+        /* Back to home button — primary teal action */
+        .home-btn {
+            background-color: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: background-color 0.2s;
+        }
+
+        .home-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Native-feeling Thumb Action Button */
+        .logout-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: #5a6268;
+        }
+
+        /* Adaptive Mobile Handling Rules */
+        @media (max-width: 480px) {
+            .denied-card {
+                padding: 20px 15px;
+                box-shadow: none;
+                background: transparent;
+            }
+            body {
+                background-color: var(--card-bg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+    <div class="denied-card">
+
+        <div class="icon-shield">🛑</div>
+
+        <div th:if="${successMessage}" th:text="${successMessage}" class="success-message"></div>
+
+        <h2>Access Denied</h2>
+        <hr>
+
+        <p class="warning-text">You are not authorized to view this resource.</p>
+
+        <div class="path-container">
+            Target Page: <span th:text="${requestedUrl != null ? requestedUrl : 'Unknown Protected Path'}">/admin/dashboard</span>
+        </div>
+
+        <form th:action="@{/}" method="GET" style="width: 100%;">
+            <button type="submit" class="home-btn">Back to home</button>
+        </form>
+
+        <form th:action="@{/logout}" method="POST" style="width: 100%;">
+            <button type="submit" class="logout-btn">Return to Security Sign-In</button>
+        </form>
+
+    </div>
+</div>
+
+</body>
+</html>

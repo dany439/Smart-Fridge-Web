@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Registration</title>
+    <style>
+        /* Cohesive CSS Architecture Base Variables */
+        :root {
+            --primary-color: #0056b3;
+            --primary-hover: #004085;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #cccccc;
+            --error-color: #ff3333;
+            --focus-shadow: rgba(0, 86, 179, 0.25);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Full Viewport App Wrapper */
+        .page-wrapper {
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        /* Native App Styling for the Registration Card */
+        .registration-card {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 420px;
+            box-sizing: border-box;
+        }
+
+        .card-title {
+            margin-top: 0;
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 1.6rem;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .registration-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+
+        /* Structured Layout Rows */
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .form-row label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            text-align: left;
+            text-transform: capitalize;
+        }
+
+        .form-row input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        /* Interactive UX Focus Polish */
+        .form-row input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--focus-shadow);
+        }
+
+        /* Thumb-Friendly Submit Layout */
+        .submit-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Context Error Warnings */
+        .error-message {
+            color: var(--error-color);
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.9rem;
+            border: 1px solid #ffcccc;
+            margin-bottom: 15px;
+        }
+
+        .field-error {
+            color: var(--error-color);
+            font-size: 0.85rem;
+            margin-top: 5px;
+            text-align: left;
+        }
+
+        /* Mobile Responsive Viewport Overrides */
+        @media (max-width: 480px) {
+            .registration-card {
+                padding: 15px;
+                box-shadow: none;
+                background: transparent;
+            }
+            body {
+                background-color: var(--card-bg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+    <div class="registration-card">
+        <h2 class="card-title">Create Account</h2>
+
+        <div th:if="${error}" th:text="${error}" class="error-message"></div>
+
+        <form th:action="@{/register/processRegistration}" th:object="${registrationDTO}" method="post" class="registration-form">
+
+            <div class="form-row">
+                <label for="username">username</label>
+                <input type="text" th:field="*{username}" id="username" placeholder="Choose a username" />
+                <div th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="field-error"></div>
+            </div>
+
+            <div class="form-row">
+                <label for="password">password</label>
+                <input type="password" th:field="*{password}" id="password" placeholder="Create a password" />
+                <div th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="field-error"></div>
+            </div>
+
+            <div class="form-row">
+                <label for="firstName">first name</label>
+                <input type="text" th:field="*{firstName}" id="firstName" placeholder="Enter your first name" />
+                <div th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}" class="field-error"></div>
+            </div>
+
+            <div class="form-row">
+                <label for="lastName">last name</label>
+                <input type="text" th:field="*{lastName}" id="lastName" placeholder="Enter your last name" />
+                <div th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}" class="field-error"></div>
+            </div>
+
+            <div class="form-row">
+                <label for="email">email</label>
+                <input type="email" th:field="*{email}" id="email" placeholder="Enter your email" />
+                <div th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="field-error"></div>
+            </div>
+
+            <button type="submit" class="submit-btn">Register</button>
+
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

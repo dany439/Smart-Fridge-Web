@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Profile - Smart Fridge</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #2c3e50;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .profile-card {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 40px;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .profile-card h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .profile-card .subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #2c3e50;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #dfe6e9;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #2ec4b6;
+        }
+
+        .form-group input.is-invalid {
+            border-color: #e74c3c;
+        }
+
+        .error-text {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .readonly-field {
+            background-color: #f4f7f6;
+            color: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #2ec4b6;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background-color: #ffffff;
+            color: #2c3e50;
+            border: 1px solid #dfe6e9;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f4f7f6;
+        }
+    </style>
+</head>
+<body>
+
+<div class="profile-card">
+    <h1>Edit Profile</h1>
+    <p class="subtitle">Update your personal information below</p>
+
+    <form th:action="@{/profile/update}" th:object="${profileUpdateDTO}" method="post">
+
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" class="readonly-field"
+                   th:value="${#authentication.name}" readonly disabled>
+        </div>
+
+        <div class="form-group">
+            <label for="firstName">First Name</label>
+            <input type="text" id="firstName" th:field="*{firstName}"
+                   th:class="${#fields.hasErrors('firstName')} ? 'is-invalid' : ''">
+            <div class="error-text" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <input type="text" id="lastName" th:field="*{lastName}"
+                   th:class="${#fields.hasErrors('lastName')} ? 'is-invalid' : ''">
+            <div class="error-text" th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" th:field="*{email}"
+                   th:class="${#fields.hasErrors('email')} ? 'is-invalid' : ''">
+            <div class="error-text" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+        </div>
+
+        <div class="btn-row">
+            <a th:href="@{/home}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+
+    </form>
+</div>
+
+</body>
+</html>

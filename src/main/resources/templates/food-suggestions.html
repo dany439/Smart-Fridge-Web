@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Recipe Suggestions</title>
+
+    <th:block th:replace="~{fragments/navbar :: ribbon-css}"></th:block>
+
+    <style>
+        nav.top-ribbon {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 60px !important;
+            background-color: #2c3e50 !important;
+            z-index: 9999 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-color:      #f4f7f6;
+            --card-bg:       #ffffff;
+            --primary:       #2ec4b6;
+            --primary-hover: #259d92;
+            --primary-light: #e6f9f7;
+            --text-main:     #2b2d42;
+            --text-sub:      #8d99ae;
+            --border:        #e2e8f0;
+            --amber:         #f0a500;
+            --amber-bg:      #fff8e6;
+            --error:         #e63946;
+            --error-bg:      #fdecea;
+            --radius:        16px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+
+        /* ── Page wrapper ── */
+        .page-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 80px 20px 40px; /* Enhanced headroom to prevent navbar clipping content */
+            width: 100%;
+        }
+
+        .inner {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        /* ── Page title ── */
+        .page-title {
+            margin-bottom: 6px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .page-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-bottom: 24px;
+        }
+
+        /* ── Expiry banner ── */
+        .expiry-banner {
+            background: var(--amber-bg);
+            border: 1px solid #f5c842;
+            border-left: 4px solid var(--amber);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            color: #7a5500;
+            margin-bottom: 20px;
+        }
+
+        /* ── Error box ── */
+        .error-box {
+            background: var(--error-bg);
+            border: 1px solid #f5c6cb;
+            border-left: 4px solid var(--error);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            color: #c0392b;
+            margin-bottom: 20px;
+        }
+
+        /* ── Controls bar ── */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .controls label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+        .controls select {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            background: var(--card-bg);
+            color: var(--text-main);
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .controls select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .btn-refresh {
+            margin-left: auto;
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .btn-refresh:hover { background-color: var(--primary-hover); }
+        .btn-refresh:active { transform: scale(0.98); }
+
+        /* ── Recipe grid ── */
+        .recipe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 20px;
+        }
+
+        /* ── Card ── */
+        .recipe-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+            cursor: pointer;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .recipe-card:hover {
+            box-shadow: 0 6px 24px rgba(0,0,0,0.09);
+            border-color: var(--primary);
+        }
+        .recipe-card.open {
+            border-color: var(--primary);
+            box-shadow: 0 8px 28px rgba(46,196,182,0.15);
+        }
+
+        /* Card summary */
+        .card-summary {
+            padding: 22px 22px 16px;
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.3;
+            margin-bottom: 14px;
+        }
+
+        /* Ingredient chips */
+        .ingredient-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .chip {
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        .chip.in-fridge {
+            background: var(--primary-light);
+            color: var(--primary-hover);
+        }
+        .chip.missing {
+            background: #f0f0f0;
+            color: var(--text-sub);
+            border: 1px dashed #c8c8c8;
+        }
+
+        /* Toggle bar */
+        .card-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 22px 12px;
+            border-top: 1px solid var(--border);
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            user-select: none;
+        }
+        .card-toggle .arrow {
+            transition: transform 0.25s ease;
+        }
+        .recipe-card.open .card-toggle .arrow {
+            transform: rotate(180deg);
+        }
+        .recipe-card.open .card-toggle {
+            color: var(--primary);
+        }
+
+        /* Expandable steps */
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+        }
+        .recipe-card.open .card-body {
+            max-height: 700px;
+        }
+        .card-body-inner {
+            padding: 16px 22px 22px;
+            border-top: 1px solid var(--border);
+        }
+
+        .steps-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+        }
+        .steps-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .steps-list li {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 0.875rem;
+            line-height: 1.55;
+            color: var(--text-main);
+        }
+        .step-num {
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 2px;
+        }
+
+        /* ── Empty state ── */
+        .state-box {
+            text-align: center;
+            padding: 64px 20px;
+            color: var(--text-sub);
+        }
+        .state-box .icon { font-size: 3rem; margin-bottom: 16px; }
+        .state-box h2 { font-size: 1.3rem; color: var(--text-main); margin-bottom: 8px; }
+        .state-box p  { font-size: 0.9rem; line-height: 1.6; }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 600px) {
+            .page-content { padding-top: 70px; } /* Clean separation beneath mobile navigation menus */
+            .recipe-grid { grid-template-columns: 1fr; }
+            .controls { flex-wrap: wrap; }
+            .btn-refresh { margin-left: 0; width: 100%; justify-content: center; }
+            .recipe-card.open .card-body { max-height: 2000px; } /* Safe overhead for wrapped lines on narrow mobile interfaces */
+        }
+
+        @media (max-width: 480px) {
+            .page-content { padding-left: 16px; padding-right: 16px; }
+            .card-summary { padding: 18px 16px 12px; }
+            .card-toggle { padding: 10px 16px 12px; }
+            .card-body-inner { padding: 14px 16px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav th:replace="~{fragments/navbar :: ribbon-menu}"></nav>
+
+<div class="page-content">
+    <div class="inner">
+
+        <h2 class="page-title">Recipe Suggestions</h2>
+        <p class="page-subtitle">Based on what's in your fridge right now</p>
+        <span th:if="${remainingCalls != null}"
+              style="font-size:0.8rem; color: var(--text-sub); display: block; margin-bottom: 12px;"
+              th:text="${remainingCalls} + ' suggestions left today'">
+        </span>
+
+        <div class="expiry-banner" th:if="${hasExpiringItems}">
+            ⚠️ Some items are expiring within 3 days — recipes have been prioritized to use them first.
+        </div>
+
+        <div class="error-box" th:if="${error}" th:text="${error}"></div>
+
+        <div class="state-box" th:if="${fridgeEmpty}">
+            <div class="icon">🧊</div>
+            <h2>Your fridge is empty</h2>
+            <p>Add some items to your fridge first,<br/>then come back for recipe ideas.</p>
+        </div>
+
+        <div class="controls" th:if="${!fridgeEmpty}">
+
+            <form method="post" th:action="@{/fridge/regenerateSuggestions}" id="regenerateForm" style="display: flex; gap: 15px; align-items: center;">
+
+                <label for="maxSelect">Show up to</label>
+                <select id="maxSelect" name="maxRecipes"
+                        th:onchange="${remainingCalls > 0} ? 'document.getElementById(\'regenerateForm\').submit()' : ''">
+                    <option value="2" th:selected="${maxRecipes == 2}">2 recipes</option>
+                    <option value="3" th:selected="${maxRecipes == 3}">3 recipes</option>
+                    <option value="5" th:selected="${maxRecipes == 5}">5 recipes</option>
+                    <option value="8" th:selected="${maxRecipes == 8}">8 recipes</option>
+                </select>
+
+                <button type="submit"
+                        class="btn-refresh"
+                        th:if="${remainingCalls > 0}"
+                        style="border: none; cursor: pointer;">
+                    ↻ Regenerate
+                </button>
+
+                <button type="button"
+                        class="btn-refresh disabled"
+                        th:if="${remainingCalls <= 0}"
+                        disabled
+                        style="background-color: var(--text-sub); cursor: not-allowed; opacity: 0.6; border: none;">
+                    ↻ No calls left
+                </button>
+
+            </form>
+        </div>
+
+        <div class="recipe-grid" th:if="${recipes != null and !#lists.isEmpty(recipes)}">
+            <div class="recipe-card"
+                 th:each="recipe, stat : ${recipes}"
+                 th:id="'card-' + ${stat.index}"
+                 onclick="toggleCard(this)">
+
+                <div class="card-summary">
+                    <div class="card-title" th:text="${recipe.title}">Recipe Title</div>
+                    <div class="ingredient-chips">
+                        <span th:each="ing : ${recipe.ingredients}"
+                              th:classappend="${ing.inFridge == 'true'} ? 'in-fridge' : 'missing'"
+                              class="chip"
+                              th:text="${ing.name}">
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-toggle">
+                    <span>View steps</span>
+                    <span class="arrow">▾</span>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-body-inner">
+                        <div class="steps-label">Steps</div>
+                        <ol class="steps-list">
+                            <li th:each="step, s : ${recipe.steps}">
+                                <span class="step-num" th:text="${s.index + 1}">1</span>
+                                <span th:text="${step}">Step text.</span>
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function toggleCard(card) {
+        card.classList.toggle('open');
+    }
+</script>
+
+</body>
+</html>

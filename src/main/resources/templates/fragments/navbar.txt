@@ -1,0 +1,19 @@
+<!-- Example Page (e.g., about.html) -->
+<!DOCTYPE html>
+<html xmlns:th="http://thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>About Us</title>
+    <th:block th:replace="~{fragments/navbar :: ribbon-css}"></th:block>
+</head>
+<body>
+
+    <nav th:replace="~{fragments/navbar :: ribbon-menu}"></nav>
+
+    <div style="padding: 20px;">
+        <h1>About Our Team</h1>
+        <p>The updated 5-entry ribbon navbar handles this tab seamlessly.</p>
+    </div>
+
+</body>
+</html>

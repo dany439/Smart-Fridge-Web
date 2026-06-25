@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:fragment="ribbon-css">
+        <style>
+            .top-ribbon {
+                position: sticky;       /* Changed from fixed to sticky */
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 60px;           /* Explicit height so it never collapses */
+                background-color: #2c3e50;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .ribbon-list {
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                height: 100%;
+            }
+
+            .ribbon-item {
+                flex: none;
+            }
+
+            .ribbon-link {
+                display: flex;
+                align-items: center;
+                color: #ffffff;
+                text-align: center;
+                padding: 0 24px;
+                height: 100%;
+                text-decoration: none;
+                font-size: 16px;
+                font-weight: bold;
+                transition: background-color 0.3s ease;
+            }
+
+            .ribbon-link:hover {
+                background-color: #1abc9c;
+            }
+
+            .ribbon-link.active {
+                background-color: #1abc9c;
+                border-bottom: 4px solid #fff;
+            }
+
+            /* 📱 Mobile Responsive Viewport Optimization */
+            @media (max-width: 768px) {
+                .top-ribbon {
+                    justify-content: flex-start; /* Align left so items start at the edge of the phone screen */
+                }
+
+                .ribbon-list {
+                    justify-content: flex-start;
+                    overflow-x: auto;          /* Enable horizontal swiping */
+                    width: 100%;
+                    white-space: nowrap;       /* Prevent menu items from wrapping to a new line */
+                    -webkit-overflow-scrolling: touch; /* Crisp, fluid scrolling on iOS devices */
+                    scrollbar-width: none;     /* Hide default scrollbars for Firefox */
+                }
+
+                /* Hide default scrollbars for Chrome, Safari, and Opera to keep it looking clean */
+                .ribbon-list::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .ribbon-link {
+                    padding: 0 16px;           /* Optimized padding for native mobile touch targets */
+                    font-size: 15px;           /* Slightly downscaled font size for mobile viewport economy */
+                }
+            }
+        </style>
+    </th:block>
+</head>
+<body>
+
+<nav th:fragment="ribbon-menu" class="top-ribbon">
+    <ul class="ribbon-list">
+        <li class="ribbon-item"><a class="ribbon-link" th:href="@{/home}">Home</a></li>
+        <li class="ribbon-item"><a class="ribbon-link" th:href="@{/fridge/list}">List</a></li>
+        <li class="ribbon-item"><a class="ribbon-link" th:href="@{/fridge/insert}">Insert</a></li>
+        <li class="ribbon-item"><a class="ribbon-link" th:href="@{/fridge/suggestions}">Suggestion</a></li>
+        <li class="ribbon-item"><a class="ribbon-link" th:href="@{/fridge/consume}">Consume</a></li>
+    </ul>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.ribbon-link').forEach(link => {
+                const linkPath = link.getAttribute('href');
+                if (currentPath === linkPath || (linkPath !== '/' && currentPath.startsWith(linkPath))) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</nav>
+
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org"
+      xmlns:sec="http://thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fridge List</title>
+    <th:block th:replace="~{fragments/navbar :: ribbon-css}"></th:block>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* FIXED: Added fluid bounds so alerts match table alignment and never touch screen borders */
+        .alert-success {
+            width: 90%;
+            max-width: 1000px;
+            margin: 20px auto 0 auto;
+            padding: 12px 20px;
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .alert-danger {
+            width: 90%;
+            max-width: 1000px;
+            margin: 20px auto 0 auto;
+            padding: 12px 20px;
+            background-color: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        /* FIXED: Changed overflow from hidden to auto to allow responsive horizontal swiping */
+        .table-container {
+            max-width: 90%;
+            margin: auto;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch; /* Smooth inertia scrolling on iOS */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 800px; /* Guarantees layout consistency inside the scrollable container */
+        }
+
+        th, td {
+            padding: 14px 18px;
+            white-space: nowrap; /* Prevents text awkwardly wrapping into vertical lines on small viewports */
+        }
+
+        /* Solid vertical borders between columns */
+        th:not(:last-child),
+        td:not(:last-child) {
+            border-right: 1px solid #dee2e6;
+        }
+
+        /* Modern table header styling */
+        th {
+            background-color: #f1f3f5;
+            color: #495057;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        /* Light gray horizontal borders */
+        tr {
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s ease;
+        }
+
+        /* Zebra striping for better visibility */
+        tbody tr:nth-child(even) {
+            background-color: #fdfdfd;
+        }
+
+        /* Hover effect on rows */
+        tbody tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        /* Apply modern Flex Engine alignment onto alerts */
+        .alert-success, .alert-danger {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Close action cursor trigger styles */
+        .close-btn {
+            margin-left: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+
+        .close-btn:hover {
+            opacity: 1;
+        }
+
+        /* Styled Action Link */
+        .consume-link {
+            display: inline-block;
+            background-color: #0d6efd;
+            color: white;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .consume-link:hover {
+            background-color: #0b5ed7;
+        }
+
+        /* ==========================================================================
+           📱 MOBILE-FIRST RESPONSIVE MEDIA QUERIES
+           ========================================================================== */
+        @media (max-width: 768px) {
+            .page-content {
+                padding-top: 20px !important; /* Optimizes distance from top mobile nav bars */
+            }
+
+            .alert-success, .alert-danger {
+                width: 95%; /* Gives more breathing room on tiny screens */
+                margin-top: 12px;
+                padding: 10px 15px;
+                font-size: 13px;
+            }
+
+            .table-container {
+                max-width: 95%;
+                margin: auto;
+                border-radius: 6px;
+            }
+
+            th, td {
+                padding: 10px 12px; /* Tapered padding to fit more content visually */
+                font-size: 13px;
+            }
+
+            th {
+                font-size: 11px;
+            }
+
+            .consume-link {
+                padding: 8px 14px; /* Enlarges link target for easier thumb taps on phones */
+                font-size: 12px;
+                text-align: center;
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<nav th:replace="~{fragments/navbar :: ribbon-menu}"></nav>
+
+<div class="page-content" style="padding-top: 20px;">
+
+    <div class="alert-success" th:if="${successMessage}">
+        <span th:text="${successMessage}"></span>
+        <span class="close-btn" onclick="dismissAlert(this)">&times;</span>
+    </div>
+
+    <div class="alert-danger" th:if="${errorMessage}">
+        <span th:text="${errorMessage}"></span>
+        <span class="close-btn" onclick="dismissAlert(this)">&times;</span>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Storage Date</th>
+                <th>Expiry Date</th>
+                <th>Added Via</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="item : ${fridgeItems}">
+                <td th:text="${item.id}"></td>
+                <td th:text="${item.name}"></td>
+                <td th:text="${item.category}"></td>
+                <td th:text="${item.quantity}"></td>
+                <td th:text="${item.unit}"></td>
+                <td th:text="${#temporals.format(item.storageDate, 'yyyy-MM-dd HH:mm')}"></td>
+                <td th:text="${#temporals.format(item.expiryDate, 'yyyy-MM-dd HH:mm')}"></td>
+                <td th:text="${item.addedVia}"></td>
+                <td>
+                    <a class="consume-link" th:href="@{/fridge/consume(itemId=${item.id}, itemName=${item.name})}">Consume</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function dismissAlert(element) {
+        const alert = element.parentElement;
+        alert.style.transition = "opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease, height 0.3s ease";
+        alert.style.opacity = "0";
+        setTimeout(() => {
+            alert.remove();
+        }, 300);
+    }
+</script>
+
+</body>
+</html>

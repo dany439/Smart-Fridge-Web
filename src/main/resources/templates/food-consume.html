@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consume Item</title>
+
+    <th:block th:replace="~{fragments/navbar :: ribbon-css}"></th:block>
+
+    <style>
+        /* --- Base Variables --- */
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary: #2ec4b6;
+            --primary-hover: #259d92;
+            --text-main: #2b2d42;
+            --text-sub: #8d99ae;
+            --border: #e2e8f0;
+            --error-color: #e63946;
+            --success-color: #2a9d8f;
+        }
+
+        /* --- Global Resets & Typography --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* --- Layout Containers --- */
+        .page-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 100px 20px 40px 20px; /* Safe padding clearance underneath fixed navbar */
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px; /* Optimized single-column design layout */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        /* --- Card Styles --- */
+        .form-card {
+            width: 100%;
+            background: var(--card-bg);
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            box-sizing: border-box;
+        }
+
+        .form-card h2 {
+            margin: 0 0 8px 0;
+            font-size: 1.5rem;
+            color: var(--text-main);
+        }
+
+        .form-card p.subtitle {
+            margin: 0 0 24px 0;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+
+        /* --- Alert Messages Banner --- */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .alert-danger {
+            background-color: #ffeae // error tint;
+            background-color: rgba(230, 57, 70, 0.1);
+            color: var(--error-color);
+            border: 1px solid rgba(230, 57, 70, 0.2);
+        }
+        .alert-success {
+            background-color: rgba(42, 157, 143, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(42, 157, 143, 0.2);
+        }
+
+        /* --- Form Elements --- */
+        .vertical-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease-in-out;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(46, 196, 182, 0.1);
+        }
+
+        .field-error {
+            font-size: 0.8rem;
+            color: var(--error-color);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        /* --- Button Styles --- */
+        button[type="submit"] {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            margin-top: 10px;
+        }
+
+        button[type="submit"]:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button[type="submit"]:active {
+            transform: scale(0.98);
+        }
+
+        /* --- Responsive Adjustments --- */
+        @media (max-width: 480px) {
+            .form-card {
+                padding: 24px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<nav th:replace="~{fragments/navbar :: ribbon-menu}"></nav>
+
+<div class="page-content">
+    <div class="container">
+
+        <div class="form-card">
+            <h2>Consume Item</h2>
+            <p class="subtitle">Log the items you have consumed from the fridge</p>
+
+            <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+            <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+            <div th:if="${#fields.hasErrors('${consumeItemDTO.*}')}" class="alert alert-danger">
+                Please correct the errors in the form below.
+            </div>
+
+            <form th:action="@{/fridge/processConsume}" th:object="${consumeItemDTO}" method="post" class="vertical-form">
+
+                <div class="form-group">
+                    <label for="itemName">Item Name</label>
+                    <input type="text" id="itemName" th:field="*{itemName}" placeholder="e.g., Milk" required />
+                    <span th:if="${#fields.hasErrors('itemName')}" th:errors="*{itemName}" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemId">Item ID (Optional if item unique)</label>
+                    <input type="number" id="itemId" th:field="*{id}" placeholder="e.g., 123" min="1" />
+                    <span th:if="${#fields.hasErrors('id')}" th:errors="*{id}" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="quantity">Quantity Consumed</label>
+                    <input type="number" id="quantity" th:field="*{quantity}" placeholder="e.g., 1.50" min="0.01" step="0.01" required />
+                    <span th:if="${#fields.hasErrors('quantity')}" th:errors="*{quantity}" class="field-error"></span>
+                </div>
+
+                <button type="submit">Log Consumption</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>
