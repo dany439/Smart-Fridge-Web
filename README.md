@@ -39,7 +39,7 @@ A few parts of this project go beyond a standard CRUD app and were the more inte
 | Persistence | Spring Data JPA / Hibernate, MySQL |
 | Frontend | Thymeleaf, Spring Security Dialect, CSS, vanilla JS |
 | ML / Image scanning | Deep Java Library (DJL) with the PyTorch engine, TorchScript model |
-| AI recipe generation | Google Gemini API (`gemini-2.0-flash`) |
+| AI recipe generation | Google Gemini API (`gemini-3.1-flash`) |
 | Build | Maven |
 | Tunneling (dev/demo) | Cloudflare Tunnel |
 
