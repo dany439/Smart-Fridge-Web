@@ -26,13 +26,19 @@ public class FridgeCacheService {
     @Autowired
     private final UserRepository userRepository;
 
+    private static final int CACHE_TTL_SECONDS = 20 * 60; // 20 minutes
+
     private String itemKey(int id) { return "fridge:item:" + id; }
     private String userSetKey(int userId) { return "fridge:user:" + userId + ":items"; }
 
     public void cacheItem(FridgeItem item) {
         try (Jedis jedis = jedisPool.getResource()) {
-            jedis.set(itemKey(item.getId()), toJson(toDto(item)));
-            jedis.sadd(userSetKey(item.getUser().getId()), String.valueOf(item.getId()));
+            String itemKey = itemKey(item.getId());
+            String setKey = userSetKey(item.getUser().getId());
+
+            jedis.setex(itemKey, CACHE_TTL_SECONDS, toJson(toDto(item)));
+            jedis.sadd(setKey, String.valueOf(item.getId()));
+            jedis.expire(setKey, CACHE_TTL_SECONDS);
         }
     }
 
@@ -68,9 +74,11 @@ public class FridgeCacheService {
             Pipeline pipeline = jedis.pipelined();
             pipeline.del(setKey);
             for (FridgeItem item : items) {
-                pipeline.set(itemKey(item.getId()), toJson(toDto(item)));
+                String itemKey = itemKey(item.getId());
+                pipeline.setex(itemKey, CACHE_TTL_SECONDS, toJson(toDto(item)));
                 pipeline.sadd(setKey, String.valueOf(item.getId()));
             }
+            pipeline.expire(setKey, CACHE_TTL_SECONDS);
             pipeline.sync();
         }
     }
