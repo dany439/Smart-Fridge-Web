@@ -12,19 +12,37 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
 public class FridgeService {
 
     FridgeItemRepository fridgeItemRepository;
+    FridgeCacheService fridgeCacheService;
 
     @Autowired
-    public FridgeService(FridgeItemRepository fridgeItemRepository) {
+    public FridgeService(FridgeItemRepository fridgeItemRepository,
+                         FridgeCacheService fridgeCacheService) {
         this.fridgeItemRepository = fridgeItemRepository;
+        this.fridgeCacheService = fridgeCacheService;
+    }
+
+    public List<FridgeItem> getUserItems(User user) {
+        List<FridgeItem> cached = fridgeCacheService.getUserItems(user.getId());
+        if (cached != null){
+            System.out.println("Returning from redis cache: " + user.getId() + " @ " + LocalDateTime.now());
+            return cached;
+        }
+
+        List<FridgeItem> fromDb = fridgeItemRepository.findByUser(user);
+        fridgeCacheService.warmCache(user.getId(), fromDb);
+        System.out.println("Fetching data from database: " + user.getId()  + " @ " + LocalDateTime.now());
+        return fromDb;
     }
 
     public List<FridgeItem> findByUser(User user) {
+        System.out.println("Fetching data from database: " + user.getId()  + " @ " + LocalDateTime.now());
         return fridgeItemRepository.findByUser(user);
     }
 
@@ -62,7 +80,9 @@ public class FridgeService {
         if (fridgeItem.getId() != null) {
             throw new IllegalArgumentException("Cannot create a new item with an existing ID: " + fridgeItem.getId());
         }
-        return fridgeItemRepository.save(fridgeItem);
+        FridgeItem saved =  fridgeItemRepository.save(fridgeItem);
+        fridgeCacheService.cacheItem(saved);
+        return saved;
     }
 
     public FridgeItem create(FridgeItemDTO fridgeItemDTO, User user) {
@@ -76,7 +96,9 @@ public class FridgeService {
                 fridgeItemDTO.getAddedVia()
                 );
 
-        return fridgeItemRepository.save(fridgeItem);
+        FridgeItem saved =  fridgeItemRepository.save(fridgeItem);
+        fridgeCacheService.cacheItem(saved);
+        return saved;
     }
 
     /**
@@ -131,14 +153,23 @@ public class FridgeService {
 
         if (item.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             fridgeItemRepository.delete(item);
+            fridgeCacheService.removeItem(item.getId(), item.getUser().getId());
             return null;
         }
 
         //update the quantity in the database
-        return fridgeItemRepository.save(item);
+        FridgeItem saved = fridgeItemRepository.save(item);
+        fridgeCacheService.cacheItem(saved);
+        return saved;
     }
 
     public List<FridgeItem> findAllWithUser() {
         return fridgeItemRepository.findAllWithUser();
+    }
+
+    public boolean hasExpiringItems(List<FridgeItem> items) {
+        LocalDateTime now = LocalDateTime.now();
+        return items.stream()
+                .anyMatch(i -> i.getExpiryDate() != null && ChronoUnit.DAYS.between(now, i.getExpiryDate()) <= 3);
     }
 }

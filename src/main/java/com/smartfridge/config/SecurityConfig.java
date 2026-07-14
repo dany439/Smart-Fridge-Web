@@ -1,4 +1,4 @@
-package com.smartfridge.security;
+package com.smartfridge.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

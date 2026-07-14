@@ -67,7 +67,6 @@ public class FridgeController {
     @GetMapping("/insert")
     public String showInsertFood(Model model, Principal principal) {
         User user = userService.findByUsername(principal.getName()).orElseThrow();
-        model.addAttribute("items", fridgeService.findByUser(user));
         model.addAttribute("fridgeItemDTOManual", new FridgeItemDTO());
         model.addAttribute("fridgeItemDTOImage", new FridgeItemDTO());
         return "food-insertion";
@@ -126,7 +125,6 @@ public class FridgeController {
             model.addAttribute("imageError", "Please upload a JPG or PNG image.");
             model.addAttribute("fridgeItemDTOImage", dto);
             model.addAttribute("fridgeItemDTOManual", new FridgeItemDTO());
-            model.addAttribute("items", fridgeService.findByUser(user));
             return "food-insertion";
         }
 
@@ -173,7 +171,7 @@ public class FridgeController {
     @GetMapping("/list")
     public String getFridgeItems(Model model, Principal principal) {
         User user = userService.findByUsername(principal.getName()).orElseThrow();
-        List<FridgeItem> fridgeItems = fridgeService.findByUser(user);
+        List<FridgeItem> fridgeItems = fridgeService.getUserItems(user);
         model.addAttribute("fridgeItems", fridgeItems);
         return "food-list";
     }
@@ -182,7 +180,7 @@ public class FridgeController {
     public String getSuggestions(Principal principal, Model model) {
         String username = principal.getName();
         User user = userService.findByUsername(username).orElseThrow();
-        List<FridgeItem> fridgeItems = fridgeService.findByUser(user);
+        List<FridgeItem> fridgeItems = fridgeService.getUserItems(user);
 
         // 1. Calculate current fridge status
         Set<String> fridgeItemNames = fridgeItems.stream()
@@ -251,7 +249,7 @@ public class FridgeController {
         }
 
         User user = userService.findByUsername(username).orElseThrow();
-        List<FridgeItem> fridgeItems = fridgeService.findByUser(user);
+        List<FridgeItem> fridgeItems = fridgeService.getUserItems(user);
 
         // 2. Short-circuit if fridge is empty (Saves tokens!)
         if (fridgeItems.isEmpty()) {
