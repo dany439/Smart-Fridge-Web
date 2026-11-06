@@ -362,7 +362,7 @@
             </form>
         </div>
 
-        <div class="recipe-grid" th:if="${recipes != null and !#lists.isEmpty(recipes)}">
+        <div class="recipe-grid" th:if="${recipes != null and !#lists.isEmpty(recipes) and !fridgeEmpty}">
             <div class="recipe-card"
                  th:each="recipe, stat : ${recipes}"
                  th:id="'card-' + ${stat.index}"

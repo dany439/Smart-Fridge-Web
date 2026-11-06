@@ -3,11 +3,10 @@ package com.smartfridge.controller;
 import com.smartfridge.dto.ConsumeItemDTO;
 import com.smartfridge.dto.FridgeItemDTO;
 import com.smartfridge.entity.FridgeItem;
-import com.smartfridge.entity.GeneratedRecipes;
 import com.smartfridge.entity.User;
 import com.smartfridge.exceptions.InsufficientStockException;
 import com.smartfridge.exceptions.ItemNotFoundException;
-import com.smartfridge.records.RecipesResponse;
+import com.smartfridge.records.SuggestionsViewModel;
 import com.smartfridge.repository.RecipeRepository;
 import com.smartfridge.service.*;
 import com.smartfridge.util.ModelHolder;
@@ -23,13 +22,10 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.security.Principal;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/fridge")
@@ -178,112 +174,27 @@ public class FridgeController {
 
     @GetMapping("/suggestions")
     public String getSuggestions(Principal principal, Model model) {
-        String username = principal.getName();
-        User user = userService.findByUsername(username).orElseThrow();
-        List<FridgeItem> fridgeItems = fridgeService.getUserItems(user);
+        User user = userService.findByUsername(principal.getName()).orElseThrow();
+        SuggestionsViewModel view = recipeService.buildSuggestionsView(user);
 
-        // 1. Calculate current fridge status
-        Set<String> fridgeItemNames = fridgeItems.stream()
-                .map(item -> item.getName().toLowerCase().trim())
-                .collect(Collectors.toSet());
-
-        LocalDateTime now = LocalDateTime.now();
-        boolean hasExpiringItems = fridgeItems.stream()
-                .anyMatch(i -> i.getExpiryDate() != null && ChronoUnit.DAYS.between(now, i.getExpiryDate()) <= 3);
-
-        model.addAttribute("fridgeEmpty", fridgeItems.isEmpty());
-        model.addAttribute("hasExpiringItems", hasExpiringItems);
-        model.addAttribute("remainingCalls", rateLimiterService.remainingCalls(username));
-
-        // 2. Pull the indefinitely saved response from the database
-        Optional<GeneratedRecipes> cachedOutput = recipeRepository.findByUser(user);
-
-        if (cachedOutput.isPresent()) {
-            try {
-                // Convert the saved JSON string back into your RecipesResponse object
-                RecipesResponse result = objectMapper.readValue(cachedOutput.get().getSavedResponse(), RecipesResponse.class);
-
-                // Run our optimized stream mapping to dynamically check the CURRENT fridge items
-                List<Map<String, Object>> recipes = result.recipes().stream().map(recipe -> {
-                    Map<String, Object> recipeMap = new LinkedHashMap<>();
-                    recipeMap.put("title", recipe.title());
-                    recipeMap.put("steps", recipe.steps());
-
-                    List<Map<String, String>> ingredients = recipe.ingredients().stream().map(name -> {
-                        Map<String, String> ingMap = new HashMap<>();
-                        ingMap.put("name", name);
-                        // This dynamically updates even if the recipe was generated days ago!
-                        ingMap.put("inFridge", String.valueOf(fridgeItemNames.contains(name.toLowerCase().trim())));
-                        return ingMap;
-                    }).toList();
-
-                    recipeMap.put("ingredients", ingredients);
-                    return recipeMap;
-                }).toList();
-
-                model.addAttribute("recipes", recipes);
-
-            } catch (Exception e) {
-                model.addAttribute("error", "Could not parse saved recipes.");
-            }
-        } else {
-            // No cached recipes found (first time user)
-            model.addAttribute("info", "No recipes generated yet. Click 'Regenerate' to ask Gemini!");
-        }
+        model.addAttribute("fridgeEmpty", view.fridgeEmpty());
+        model.addAttribute("hasExpiringItems", view.hasExpiringItems());
+        model.addAttribute("remainingCalls", rateLimiterService.remainingCalls(principal.getName()));
+        if (view.recipes() != null) model.addAttribute("recipes", view.recipes());
+        if (view.error() != null) model.addAttribute("error", view.error());
+        if (view.info() != null) model.addAttribute("info", view.info());
 
         return "food-suggestions";
     }
 
     @PostMapping("/regenerateSuggestions")
-    public String regenerateSuggestions(
-            Principal principal,
-            @RequestParam(defaultValue = "3") int maxRecipes,
-            RedirectAttributes redirectAttributes // Used to pass messages safely through the redirect
-    ) {
-        String username = principal.getName();
+    public String regenerateSuggestions(Principal principal,
+                                        @RequestParam(defaultValue = "3") int maxRecipes,
+                                        RedirectAttributes redirectAttributes) {
+        User user = userService.findByUsername(principal.getName()).orElseThrow();
+        RecipeService.RegenerateResult result = recipeService.regenerate(user, maxRecipes);
 
-        // 1. Check Rate Limit
-        if (!rateLimiterService.isAllowed(username)) {
-            redirectAttributes.addFlashAttribute("error", "You've reached the limit of 10 recipe suggestions per day. Come back tomorrow!");
-            return "redirect:/fridge/suggestions";
-        }
-
-        User user = userService.findByUsername(username).orElseThrow();
-        List<FridgeItem> fridgeItems = fridgeService.getUserItems(user);
-
-        // 2. Short-circuit if fridge is empty (Saves tokens!)
-        if (fridgeItems.isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "Your fridge is empty! Add some food before generating recipes.");
-            return "redirect:/fridge/suggestions";
-        }
-
-        // 3. Generate New Recipes via Gemini
-        try {
-            RecipesResponse result = recipeService.generateRecipes(fridgeItems, maxRecipes);
-
-            // Only increment the rate limiter on a successful API return
-            rateLimiterService.increment(username);
-
-            // 4. Save/Upsert the JSON permanently into the database
-            GeneratedRecipes outputData = recipeRepository.findByUser(user)
-                    .orElseGet(() -> {
-                        GeneratedRecipes newRow = new GeneratedRecipes();
-                        newRow.setUser(user);
-                        return newRow;
-                    });
-
-            // Convert the object to a JSON string and save it
-            outputData.setSavedResponse(objectMapper.writeValueAsString(result));
-            outputData.setLastUpdated(LocalDateTime.now());
-            recipeRepository.save(outputData);
-
-            redirectAttributes.addFlashAttribute("success", "Recipes successfully regenerated!");
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Could not generate recipes. Please try again.");
-        }
-
-        // Redirect cleanly back to the GET page to render the new data
+        redirectAttributes.addFlashAttribute(result.success() ? "success" : "error", result.message());
         return "redirect:/fridge/suggestions";
     }
 

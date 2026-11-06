@@ -1,7 +1,11 @@
 package com.smartfridge.service;
 
 import com.smartfridge.entity.FridgeItem;
+import com.smartfridge.entity.GeneratedRecipes;
+import com.smartfridge.entity.User;
 import com.smartfridge.records.RecipesResponse;
+import com.smartfridge.records.SuggestionsViewModel;
+import com.smartfridge.repository.RecipeRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
@@ -15,8 +19,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class RecipeService {
@@ -65,6 +69,136 @@ public class RecipeService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private final FridgeService fridgeService;
+    private final RecipeRepository recipeRepository;
+    private final RecipeCacheService recipeCacheService;
+    private final RateLimiterService rateLimiterService;
+
+    public RecipeService(FridgeService fridgeService,
+                         RecipeRepository recipeRepository,
+                         RecipeCacheService recipeCacheService,
+                         RateLimiterService rateLimiterService) {
+        this.fridgeService = fridgeService;
+        this.recipeRepository = recipeRepository;
+        this.recipeCacheService = recipeCacheService;
+        this.rateLimiterService = rateLimiterService;
+    }
+
+    // -------------------------------------------------
+    // Suggestions view (used by GET /suggestions)
+    // -------------------------------------------------
+
+    public SuggestionsViewModel buildSuggestionsView(User user) {
+        List<FridgeItem> fridgeItems = fridgeService.getUserItems(user);
+        Set<String> fridgeItemNames = fridgeItems.stream()
+                .map(item -> item.getName().toLowerCase().trim())
+                .collect(Collectors.toSet());
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean hasExpiringItems = fridgeItems.stream()
+                .anyMatch(i -> i.getExpiryDate() != null && ChronoUnit.DAYS.between(now, i.getExpiryDate()) <= 3);
+        boolean fridgeEmpty = fridgeItems.isEmpty();
+
+        RecipesResponse result = resolveRecipes(user);
+
+        if (result == null) {
+            return new SuggestionsViewModel(fridgeEmpty, hasExpiringItems, null,
+                    null, "No recipes generated yet. Click 'Regenerate' to ask Gemini!");
+        }
+
+        List<Map<String, Object>> recipes = mapWithFridgeStatus(result, fridgeItemNames);
+        return new SuggestionsViewModel(fridgeEmpty, hasExpiringItems, recipes, null, null);
+    }
+
+    // cache first, DB fallback, repopulate cache on fallback hit
+    private RecipesResponse resolveRecipes(User user) {
+        Optional<RecipesResponse> cached = recipeCacheService.getCached(user.getUsername());
+        if (cached.isPresent()) {
+            System.out.println("Cache hit: " + user.getId() + " @ " + LocalDateTime.now());
+            return cached.get();
+        }
+
+        Optional<GeneratedRecipes> dbRow = recipeRepository.findByUser(user);
+        if (dbRow.isEmpty()) {
+            return null;
+        }
+
+        try {
+            RecipesResponse parsed = objectMapper.readValue(dbRow.get().getSavedResponse(), RecipesResponse.class);
+            recipeCacheService.save(user.getUsername(), parsed);
+            System.out.println("DB fallback: " + user.getId() + " @ " + LocalDateTime.now());
+            return parsed;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private List<Map<String, Object>> mapWithFridgeStatus(RecipesResponse result, Set<String> fridgeItemNames) {
+        return result.recipes().stream().map(recipe -> {
+            Map<String, Object> recipeMap = new LinkedHashMap<>();
+            recipeMap.put("title", recipe.title());
+            recipeMap.put("steps", recipe.steps());
+
+            List<Map<String, String>> ingredients = recipe.ingredients().stream().map(name -> {
+                Map<String, String> ingMap = new HashMap<>();
+                ingMap.put("name", name);
+                ingMap.put("inFridge", String.valueOf(fridgeItemNames.contains(name.toLowerCase().trim())));
+                return ingMap;
+            }).toList();
+
+            recipeMap.put("ingredients", ingredients);
+            return recipeMap;
+        }).toList();
+    }
+
+    // -------------------------------------------------
+    // Regenerate (used by POST /regenerateSuggestions)
+    // -------------------------------------------------
+
+    public RegenerateResult regenerate(User user, int maxRecipes) {
+        String username = user.getUsername();
+
+        if (!rateLimiterService.isAllowed(username)) {
+            return RegenerateResult.failure("You've reached the limit of 10 recipe suggestions per day. Come back tomorrow!");
+        }
+
+        List<FridgeItem> fridgeItems = fridgeService.getUserItems(user);
+        if (fridgeItems.isEmpty()) {
+            return RegenerateResult.failure("Your fridge is empty! Add some food before generating recipes.");
+        }
+
+        try {
+            RecipesResponse result = generateRecipes(fridgeItems, maxRecipes);
+            rateLimiterService.increment(username);
+
+            GeneratedRecipes outputData = recipeRepository.findByUser(user)
+                    .orElseGet(() -> {
+                        GeneratedRecipes newRow = new GeneratedRecipes();
+                        newRow.setUser(user);
+                        return newRow;
+                    });
+
+            outputData.setSavedResponse(objectMapper.writeValueAsString(result));
+            outputData.setLastUpdated(LocalDateTime.now());
+            recipeRepository.save(outputData);
+
+            recipeCacheService.save(username, result);
+
+            return RegenerateResult.success("Recipes successfully regenerated!");
+        } catch (Exception e) {
+            return RegenerateResult.failure("Could not generate recipes. Please try again.");
+        }
+    }
+
+    public record RegenerateResult(boolean success, String message) {
+        static RegenerateResult success(String msg) { return new RegenerateResult(true, msg); }
+        static RegenerateResult failure(String msg) { return new RegenerateResult(false, msg); }
+    }
+
+    // -------------------------------------------------
+    // Gemini API call (unchanged from your original)
+    // -------------------------------------------------
+
     public RecipesResponse generateRecipes(List<FridgeItem> fridgeItems, int maxRecipes) throws Exception {
         String userMessage = buildUserMessage(fridgeItems, maxRecipes);
         String requestBody = buildRequestBody(userMessage);
@@ -93,10 +227,6 @@ public class RecipeService {
         return objectMapper.readValue(text, RecipesResponse.class);
     }
 
-    // -------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------
-
     private String buildUserMessage(List<FridgeItem> items, int maxRecipes) throws Exception {
         LocalDateTime now = LocalDateTime.now();
 
@@ -109,7 +239,7 @@ public class RecipeService {
                 long daysLeft = ChronoUnit.DAYS.between(now, item.getExpiryDate());
                 node.put("expires_in_days", daysLeft);
             } else {
-                node.put("expires_in_days", 999); // no expiry known
+                node.put("expires_in_days", 999);
             }
 
             fridgeArray.add(node);
@@ -123,10 +253,6 @@ public class RecipeService {
     }
 
     private String buildRequestBody(String userMessage) throws Exception {
-        // Gemini request structure:
-        // { "system_instruction": { "parts": [{ "text": "..." }] },
-        //   "contents": [{ "parts": [{ "text": "..." }] }] }
-
         ObjectNode systemPart = objectMapper.createObjectNode();
         systemPart.put("text", SYSTEM_PROMPT);
         ArrayNode systemParts = objectMapper.createArrayNode();
@@ -144,7 +270,6 @@ public class RecipeService {
         ArrayNode contents = objectMapper.createArrayNode();
         contents.add(userContent);
 
-        // Tell Gemini to respond in JSON
         ObjectNode responseMimeType = objectMapper.createObjectNode();
         responseMimeType.put("response_mime_type", "application/json");
 
@@ -154,22 +279,5 @@ public class RecipeService {
         root.set("generationConfig", responseMimeType);
 
         return objectMapper.writeValueAsString(root);
-    }
-
-    private JsonNode parseRecipesFromResponse(String responseBody) throws Exception {
-        JsonNode root = objectMapper.readTree(responseBody);
-
-        // Gemini wraps the output: candidates[0].content.parts[0].text
-        String text = root
-                .path("candidates").get(0)
-                .path("content")
-                .path("parts").get(0)
-                .path("text")
-                .asText();
-
-        // Strip markdown fences if Gemini adds them despite response_mime_type
-        text = text.replaceAll("(?s)```json\\s*", "").replaceAll("```", "").trim();
-
-        return objectMapper.readTree(text);
     }
 }
